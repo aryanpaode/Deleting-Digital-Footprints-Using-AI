@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Remediation Report — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Phase 4{% endblock %}
+{% block page_title %}Final Remediation Report{% endblock %}
+{% block content %}
+<section class="page-heading"><div><span class="section-kicker">Audit-ready summary</span><h1>Remediation report</h1><p>Safe summary of decisions, actions, evidence, and re-scan verification. Sensitive local paths, cookie values, mailbox tokens and passwords are excluded.</p></div><a class="btn btn-secondary" href="{{ url_for('phase4_report_json') }}">Download JSON</a></section>
+{% set s=report.get('summary',{}) %}
+<section class="phase4-summary-grid phase4-summary-grid-compact">
+<article class="summary-stat-card"><small>Findings</small><strong>{{ s.get('total_tasks',0) }}</strong><span>{{ s.get('decisions_recorded',0) }} decisions recorded</span></article>
+<article class="summary-stat-card"><small>Approved</small><strong>{{ s.get('approved',0) }}</strong><span>{{ s.get('initiated_actions',0) }} initiated</span></article>
+<article class="summary-stat-card"><small>Completed</small><strong>{{ s.get('completed_actions',0) }}</strong><span>{{ s.get('retained',0) }} retained</span></article>
+<article class="summary-stat-card"><small>Skipped</small><strong>{{ s.get('skipped',0) }}</strong><span>{{ s.get('failed',0) }} failed / attention</span></article>
+</section>
+<section class="panel"><div class="panel-title-row"><div><span class="section-kicker">Action ledger</span><h2>All Phase 4 outcomes</h2></div></div><div class="phase4-table-wrap"><table class="phase4-resolved-table"><thead><tr><th>Finding</th><th>Risk</th><th>Action</th><th>Status</th><th>Verification</th></tr></thead><tbody>
+{% for t in report.get('tasks',[]) %}<tr><td><strong>{{ t.get('target') or t.get('finding_id') }}</strong><small>{{ t.get('finding_id') }}</small></td><td>{{ t.get('risk_level') }} · {{ t.get('risk_score') }}</td><td>{{ t.get('recommended_action','')|replace('_',' ')|title }}</td><td>{{ (t.get('outcome') or t.get('status') or '')|replace('_',' ')|title }}</td><td>{{ (t.get('verification_status') or 'not required')|replace('_',' ')|title }}{% if t.get('email_submission') %}{% set em=t.get('email_submission',{}) %}<small>Email ref: {{ em.get('reference') }} · {% if em.get('sent_items_verified') %}Gmail SENT proof verified{% elif em.get('user_confirmed_sent') %}Sent visibility user-confirmed{% else %}provider proof pending{% endif %}</small>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% if report.get('rescan_verification') %}<section class="panel"><span class="section-kicker">Re-scan verification</span><h2>Before / after result</h2><p>Before: {{ report.get('rescan_verification',{}).get('before_risk',{}).get('score',0) }} · After: {{ report.get('rescan_verification',{}).get('after_risk',{}).get('score',0) }} · Verified changes: {{ report.get('rescan_verification',{}).get('summary',{}).get('verified',0) }}</p></section>{% endif %}
+<div class="panel-actions"><a class="btn btn-secondary" href="{{ url_for('phase4') }}">← Back to Phase 4</a></div>
+{% endblock %}

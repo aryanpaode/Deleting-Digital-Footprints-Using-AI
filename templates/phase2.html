@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Phase 2 — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Phase 2{% endblock %}
+{% block page_title %}Evidence Discovery{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="section-kicker">Evidence before interpretation</span>
+        <h1>What the system discovered</h1>
+        <p>
+            Phase 2 aggregates public footprint evidence, breach/broker exposure,
+            and passive local browser metadata before any AI interpretation occurs.
+        </p>
+    </div>
+
+    {% if aggregate %}
+        <a class="btn btn-secondary" href="{{ url_for('phase3') }}">Continue to Phase 3 →</a>
+    {% endif %}
+</section>
+
+{% if aggregate %}
+    <section class="metric-grid">
+        <article class="metric-card">
+            <span class="metric-label">Public candidates</span>
+            <strong>{{ p2.get('public_candidates', 0) }}</strong>
+            <small>{{ p2.get('public_retained_matches', 0) }} retained · {{ p2.get('public_possible_matches', 0) }} possible</small>
+        </article>
+
+        <article class="metric-card">
+            <span class="metric-label">Visual identity</span>
+            {% if p2.get('visual_search_status') == 'completed' %}
+                <strong>{{ p2.get('visual_matches', 0) }}</strong>
+                <small>
+                    {{ p2.get('visual_independent_images_discovered', 0) }} independently discovered ·
+                    {{ p2.get('visual_images_checked', 0) }} checked ·
+                    {{ p2.get('visual_faces_checked', 0) }} faces ·
+                    {{ p2.get('visual_manual_confirmed_images', 0) }} manually confirmed
+                </small>
+            {% elif p2.get('visual_search_status') == 'not_used' %}
+                <strong class="metric-status-text">Not used</strong>
+                <small>Optional reference image was not used for this scan.</small>
+            {% else %}
+                <strong class="metric-status-text">Not run</strong>
+                <small>{{ p2.get('visual_reason') or p2.get('visual_search_status', 'Unavailable') }}</small>
+            {% endif %}
+        </article>
+
+        <article class="metric-card">
+            <span class="metric-label">Known breaches</span>
+            {% if p2.get('breach_lookup_status') == 'success' %}
+                <strong>{{ p2.get('known_breaches', 0) }}</strong>
+                <small>{{ p2.get('broker_records', 0) }} broker records · lookup completed</small>
+            {% else %}
+                <strong class="metric-status-text">{{ p2.get('known_breaches', 0) }}</strong>
+                <small>Lookup status: {{ p2.get('breach_lookup_status', 'not run')|replace('_', ' ') }}</small>
+            {% endif %}
+        </article>
+
+        <article class="metric-card">
+            <span class="metric-label">Persistent cookies</span>
+            <strong>{{ p2.get('persistent_cookies', 0) }}</strong>
+            <small>{{ p2.get('potential_tracker_cookies', 0) }} potential tracker cookies</small>
+        </article>
+
+        <article class="metric-card">
+            <span class="metric-label">Browser profiles</span>
+            <strong>{{ p2.get('browser_profiles', 0) }}</strong>
+            <small>{{ p2.get('risky_permissions', 0) }} risky permissions</small>
+        </article>
+    </section>
+
+    {% if p2.get('visual_search_status') == 'completed' and p2.get('visual_reviewable_images', 0) > 0 %}
+        <section class="visual-review-callout panel">
+            <div>
+                <span class="section-kicker">Human-in-the-loop visual review</span>
+                <h2>Review the fetched public images</h2>
+                <p>
+                    {{ p2.get('visual_reviewable_images', 0) }} locally cached image(s) are available from page extraction and independent image discovery.
+                    You can confirm whether each image actually shows the searched person, even if dlib detected no usable face.
+                </p>
+            </div>
+            <a class="btn btn-primary" href="{{ url_for('phase2_visual_review') }}">Review fetched images →</a>
+        </section>
+    {% endif %}
+
+    {% if p2.get('visual_search_status') == 'completed' and p2.get('visual_independent_queries', 0) > 0 %}
+        <section class="panel visual-discovery-summary">
+            <div>
+                <span class="section-kicker">Independent image discovery</span>
+                <h2>Identity-guided visual search</h2>
+                <p>
+                    Phase 2A searched image results independently using combinations of the supplied name, username, email, and individual context terms.
+                </p>
+            </div>
+            <div class="visual-discovery-stats">
+                <span><strong>{{ p2.get('visual_independent_queries', 0) }}</strong> queries</span>
+                <span><strong>{{ p2.get('visual_independent_images_discovered', 0) }}</strong> candidates</span>
+                <span><strong>{{ p2.get('visual_independent_images_checked', 0) }}</strong> checked</span>
+                <span><strong>{{ p2.get('visual_independent_faces_checked', 0) }}</strong> faces</span>
+                <span><strong>{{ p2.get('visual_independent_matches', 0) }}</strong> auto matches</span>
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="layer-grid">
+        <article class="panel layer-panel">
+            <div class="layer-number">2A</div>
+            <div>
+                <span class="section-kicker">Public footprint</span>
+                <h2>Discovery results</h2>
+                <p>Search, academic, developer, professional, media, profile, and optional visual identity evidence.</p>
+            </div>
+            <div class="layer-summary">
+                <strong>{{ p2.get('public_retained_matches', 0) }}</strong>
+                <span>retained matches</span>
+            </div>
+        </article>
+
+        <article class="panel layer-panel">
+            <div class="layer-number">2B</div>
+            <div>
+                <span class="section-kicker">Breach & broker</span>
+                <h2>Exposure checks</h2>
+                <p>Known breaches and configured broker evidence.</p>
+            </div>
+            <div class="layer-summary">
+                <strong>{{ p2.get('known_breaches', 0) }}</strong>
+                <span>known breaches</span>
+            </div>
+        </article>
+
+        <article class="panel layer-panel">
+            <div class="layer-number">2C</div>
+            <div>
+                <span class="section-kicker">Local browser</span>
+                <h2>Passive metadata</h2>
+                <p>Cookies, tracker indicators, and risky permissions — metadata only.</p>
+            </div>
+            <div class="layer-summary">
+                <strong>{{ p2.get('potential_tracker_cookies', 0) }}</strong>
+                <span>tracker indicators</span>
+            </div>
+        </article>
+    </section>
+
+    {% if public_results %}
+        <section class="panel">
+            <div class="panel-title-row">
+                <div>
+                    <span class="section-kicker">Public footprint</span>
+                    <h2>Matching discovered results</h2>
+                    <p>
+                        Every retained Phase 2 match is listed here. Confirmed matches are
+                        accepted from deterministic evidence; Strong and Possible matches
+                        will be sent to human Yes / No / Unsure confirmation in Phase 3.
+                    </p>
+                </div>
+                <span class="soft-label">{{ public_results|length }} retained findings</span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Finding</th>
+                            <th>Category</th>
+                            <th>Identity</th>
+                            <th>Confirmation</th>
+                            <th>Visual evidence</th>
+                            <th>Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in public_results %}
+                            <tr>
+                                <td>
+                                    {% if item.url %}
+                                        <a href="{{ item.url }}"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            <strong>{{ item.title }}</strong>
+                                        </a>
+                                    {% else %}
+                                        <strong>{{ item.title }}</strong>
+                                    {% endif %}
+                                    <small>{{ item.domain }}</small>
+                                    {% if item.match_reasons %}
+                                        <small>{{ item.match_reasons[0] }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.source_category }}</td>
+                                <td>
+                                    <span class="identity-chip">{{ item.identity_status }}</span>
+                                    {% if item.identity_score is not none %}
+                                        <small>{{ item.identity_score }}/100</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.identity_status == 'Confirmed' %}
+                                        <span class="visual-chip visual-confirmed">Confirmed by evidence</span>
+                                        <small>No additional ownership question required.</small>
+                                    {% elif item.needs_identity_confirmation %}
+                                        <span class="soft-label">Needs confirmation</span>
+                                                                            {% else %}
+                                        <span class="soft-label">Review</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.visual_manual_verification == 'confirmed' %}
+                                        <span class="visual-chip visual-confirmed">Human confirmed</span>
+                                        <small>{{ item.visual_manual_confirmed_count }} image(s)</small>
+                                    {% elif item.visual_manual_verification == 'rejected' %}
+                                        <span class="visual-chip visual-none">Human rejected</span>
+                                    {% elif item.visual_match_found %}
+                                        <span class="visual-chip visual-{{ item.visual_match_strength|lower }}">
+                                            {{ item.visual_match_strength }} match
+                                        </span>
+                                        {% if item.visual_face_distance is not none %}
+                                            <small>distance {{ '%.3f'|format(item.visual_face_distance) }}</small>
+                                        {% endif %}
+                                    {% elif item.visual_images_checked %}
+                                        <span class="visual-chip visual-none">No match</span>
+                                        <small>{{ item.visual_images_checked }} image(s) checked</small>
+                                    {% else %}
+                                        <span class="muted-dash">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="risk-pill {{ risk_class(item.risk_level) }}">
+                                        {{ item.risk_level }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% set uncertain_count = public_results|selectattr('needs_identity_confirmation')|list|length %}
+            {% if uncertain_count > 0 %}
+                <div class="verify-submit-bar">
+                    <div>
+                        <strong>{{ uncertain_count }} match{% if uncertain_count != 1 %}es{% endif %} still need ownership confirmation.</strong>
+                        <span>Continue to Phase 3 to answer Yes / No / Unsure before final risk is calculated.</span>
+                    </div>
+                    <a class="btn btn-primary" href="{{ url_for('phase3') }}">Continue to confirmation →</a>
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+
+{% else %}
+    <section class="panel empty-panel">
+        <div class="empty-symbol">⌕</div>
+        <h2>No Phase 2 evidence yet</h2>
+        <p>Start with Phase 1, provide consent, and run a privacy scan.</p>
+        <a class="btn btn-primary" href="{{ url_for('phase1') }}">Open Phase 1</a>
+    </section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% block title %}Phase 3 — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Phase 3{% endblock %}
+{% block page_title %}AI Interpretation{% endblock %}
+
+{% block content %}
+<style>
+    /* Phase 3: compact organization-role evidence table */
+    .association-table-shell {
+        margin-top: 1.15rem;
+        overflow-x: auto;
+        border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+        border-radius: 16px;
+        background: rgba(7, 7, 10, 0.34);
+    }
+
+    .association-pair-table {
+        width: 100%;
+        min-width: 620px;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+    }
+
+    .association-pair-table col:first-child {
+        width: 55%;
+    }
+
+    .association-pair-table col:last-child {
+        width: 45%;
+    }
+
+    .association-pair-table th,
+    .association-pair-table td {
+        text-align: left;
+        vertical-align: middle;
+        overflow-wrap: anywhere;
+    }
+
+    .association-pair-table th {
+        padding: 15px 28px;
+        border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+        background: rgba(255, 255, 255, 0.035);
+        color: #d8d8de;
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.045em;
+        text-transform: uppercase;
+    }
+
+    .association-pair-table td {
+        padding: 18px 28px;
+        color: #e4e4e8;
+        font-size: 1rem;
+        line-height: 1.45;
+    }
+
+    .association-pair-table th + th,
+    .association-pair-table td + td {
+        padding-left: 42px;
+        border-left: 1px solid var(--border-soft, rgba(255, 255, 255, 0.07));
+    }
+
+    .association-pair-table tbody tr:not(:last-child) td {
+        border-bottom: 1px solid var(--border-soft, rgba(255, 255, 255, 0.07));
+    }
+
+    .association-pair-table tbody tr:hover td {
+        background: rgba(255, 255, 255, 0.022);
+    }
+
+    .association-pair-table td:first-child strong {
+        color: #ffffff;
+        font-weight: 800;
+    }
+
+    .association-table-empty {
+        padding: 20px 28px !important;
+        text-align: center !important;
+    }
+
+    @media (max-width: 760px) {
+        .association-pair-table th,
+        .association-pair-table td {
+            padding-right: 20px;
+            padding-left: 20px;
+        }
+
+        .association-pair-table th + th,
+        .association-pair-table td + td {
+            padding-left: 30px;
+        }
+    }
+</style>
+<section class="page-heading">
+    <div>
+        <span class="section-kicker">Human-guided AI analysis</span>
+        <h1>Interpret the evidence</h1>
+        <p>
+            Phase 3 classifies findings, evaluates privacy risk,
+            requests identity confirmation where needed, and reassesses
+            confirmed results before producing the final cross-layer view.
+        </p>
+    </div>
+</section>
+
+{% if aggregate and not phase3 %}
+    <section class="panel phase3-ready-panel">
+        <div class="ai-emblem">✦</div>
+
+        <div class="phase3-ready-copy">
+            <span class="section-kicker">Ready to analyze</span>
+            <h2>Phase 2 evidence is available</h2>
+            <p>
+                The AI will receive minimized findings only.
+                Raw email, phone, browser paths, browsing history, and cookie values are excluded.
+            </p>
+
+            <div class="privacy-tags">
+                <span>✓ Raw email excluded</span>
+                <span>✓ Raw phone excluded</span>
+                <span>✓ History excluded</span>
+                <span>✓ Cookie values excluded</span>
+            </div>
+        </div>
+
+        <form method="post"
+              action="{{ url_for('phase3_start') }}"
+              class="js-busy-form"
+              data-busy-title="Running Phase 3 AI analysis…"
+              data-busy-text="Sanitized findings are being interpreted in batches.">
+
+            <button class="btn btn-primary btn-large" type="submit">
+                Start Phase 3
+                <span>✦</span>
+            </button>
+        </form>
+    </section>
+
+{% elif phase3 %}
+    {% set overall = phase3.get('cross_layer_assessment', {}) %}
+    {% set summary = phase3.get('summary', {}) %}
+
+    <section class="phase3-summary-grid">
+        <article class="risk-card {{ risk_class(overall.get('overall_risk_level', 'Low')) }}">
+            <div class="risk-orb"
+                 style="--risk-progress: {{ overall.get('overall_risk_score', 0) }}%;">
+                <div class="risk-orb-inner">
+                    <div class="risk-score-number">
+                        <strong>{{ overall.get('overall_risk_score', 0) }}</strong>
+                        <span>/100</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-card-copy">
+                <small>Overall privacy risk</small>
+                <h2>{{ overall.get('overall_risk_level', 'Unknown') }}</h2>
+                <p>Final score after verification and reassessment.</p>
+            </div>
+        </article>
+
+        <article class="summary-stat-card">
+            <small>Total findings</small>
+            <strong>{{ summary.get('total_findings', 0) }}</strong>
+        </article>
+
+        <article class="summary-stat-card">
+            <small>User confirmed</small>
+            <strong>{{ summary.get('verification', {}).get('confirmed', 0) }}</strong>
+        </article>
+
+        <article class="summary-stat-card">
+            <small>AI reassessed</small>
+            <strong>{{ summary.get('post_verification_reassessed', 0) }}</strong>
+        </article>
+    </section>
+
+    {% set associations = phase3.get('public_associations', {}) %}
+    {% if associations %}
+        <section class="panel interpretation-panel">
+            <span class="section-kicker">Public professional & academic associations</span>
+            <h2>Organization-role associations identified in verified evidence</h2>
+            <p class="interpretation-text">{{ associations.get('summary', '') }}</p>
+            <p class="muted" style="margin-top: .45rem;">
+                This relationship table summarizes accepted Phase 2 evidence only.
+                It does not remove, rescan, or recalculate public-footprint findings.
+            </p>
+            {% set source_counts = associations.get('source_counts', {}) %}
+            {% if source_counts %}
+                <p class="muted" style="margin-top: .7rem;">
+                    {{ source_counts.get('public_findings', 0) }} public findings ·
+                    {{ source_counts.get('accepted_sources', 0) }} accepted sources ·
+                    {{ source_counts.get('user_no', 0) }} marked No ·
+                    {{ source_counts.get('user_unsure', 0) }} Unsure.
+                </p>
+                <p class="muted" style="margin-top: .35rem;">
+                    {{ source_counts.get('contributing_sources', 0) }} accepted source{% if source_counts.get('contributing_sources', 0) != 1 %}s{% endif %}
+                    supplied organization or role evidence.
+                    {{ source_counts.get('accepted_without_new_claim', 0) }} other accepted finding{% if source_counts.get('accepted_without_new_claim', 0) != 1 %}s{% endif %}
+                    remain accepted but supplied no additional association claim.
+                    No association extracted does not mean the identity was rejected.
+                </p>
+            {% endif %}
+            {% for warning in associations.get('warnings', []) %}
+                <p class="muted">{{ warning }}</p>
+            {% endfor %}
+
+            {% set association_rows = associations.get('association_rows', []) %}
+            <div class="association-table-shell">
+                <table class="association-pair-table" aria-label="Verified organization and role associations">
+                    <colgroup>
+                        <col>
+                        <col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Organization name</th>
+                            <th scope="col">Role</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% if association_rows %}
+                        {% for row in association_rows[:3] %}
+                            <tr>
+                                <td><strong>{{ row.get('organization') }}</strong></td>
+                                <td>{{ row.get('role') }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="2" class="muted association-table-empty">No reliable organization-role pair was established from the accepted evidence.</td>
+                        </tr>
+                    {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="phase3-summary-grid" style="margin-top: 1rem;">
+                <article class="summary-stat-card">
+                    <small>Confidence</small>
+                    <strong>{{ associations.get('confidence', 'Low') }}</strong>
+                </article>
+
+                <article class="summary-stat-card">
+                    <small>Evidence recency</small>
+                    <strong>{{ associations.get('evidence_recency', 'Mostly undated') }}</strong>
+                </article>
+            </div>
+
+            {% if associations.get('evidence') %}
+                <details style="margin-top: 1rem;">
+                    <summary>View supporting association evidence ({{ associations.get('evidence')|length }})</summary>
+                    <div class="analysis-list" style="margin-top: 1rem;">
+                        {% for evidence in associations.get('evidence', []) %}
+                            <article class="analysis-row">
+                                <div class="analysis-main">
+                                    <span class="finding-id">{{ evidence.get('finding_id') }}</span>
+                                    <h3>{{ evidence.get('title') or evidence.get('domain') }}</h3>
+                                    <small>Included via: {{ evidence.get('acceptance_basis', 'verified')|replace('_', ' ') }}</small>
+                                    <p>
+                                        {% if evidence.get('organizations') %}
+                                            Organizations: {{ evidence.get('organizations')|join(', ') }}
+                                        {% endif %}
+                                        {% if evidence.get('roles') %}
+                                            {% if evidence.get('organizations') %} · {% endif %}
+                                            Roles: {{ evidence.get('roles')|join(', ') }}
+                                        {% endif %}
+                                        {% if evidence.get('published_date') %} · {{ evidence.get('published_date') }}{% endif %}
+                                    </p>
+                                    {% if evidence.get('claims') %}
+                                        <details>
+                                            <summary>Show the supporting text</summary>
+                                            {% for claim in evidence.get('claims', []) %}
+                                                <p><strong>{{ claim.get('value') }}</strong>
+                                                — {{ claim.get('evidence_excerpt') }}
+                                                <small>({{ claim.get('source_field') }})</small></p>
+                                            {% endfor %}
+                                        </details>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </details>
+            {% endif %}
+            {% if associations.get('source_audit') %}
+                <details style="margin-top: 1rem;">
+                    <summary>Audit all {{ associations.get('source_audit')|length }} source decisions (including No / Unsure)</summary>
+                    <div class="table-wrap" style="max-height: 24rem; overflow: auto; margin-top: .8rem;">
+                        <table class="data-table">
+                            <thead><tr><th>Finding</th><th>Saved identity answer</th><th>Footprint accepted?</th><th>Association evidence</th><th>Reason</th></tr></thead>
+                            <tbody>
+                            {% for row in associations.get('source_audit', []) %}
+                                <tr>
+                                    <td>{{ row.get('finding_id') }}<br>{{ row.get('title') }}</td>
+                                    <td>{{ {'confirmed': 'Yes', 'rejected': 'No', 'unsure': 'Unsure', 'not_required': 'Not required'}.get(row.get('user_decision'), 'Missing') }}</td>
+                                    <td>{{ 'Accepted' if row.get('accepted') else ('Unresolved' if row.get('user_decision') == 'unsure' else 'Excluded') }}</td>
+                                    <td>{{ 'Organization / role found' if row.get('contributed') else ('No additional claim — still accepted' if row.get('accepted') else 'Not used') }}</td>
+                                    <td>
+                                        {{ row.get('reason', '')|replace('_', ' ') }}
+                                        {% if row.get('decision_fields') %}
+                                        <details><summary>Saved decision fields{% if row.get('decision_conflict') %} — conflict{% endif %}</summary>
+                                            <small>Result: {{ row.get('decision_fields', {}).get('user_verification') }}<br>
+                                            Audit response: {{ row.get('decision_fields', {}).get('verification_audit_response') }}</small>
+                                        </details>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="panel interpretation-panel">
+        <span class="section-kicker">Cross-layer interpretation</span>
+        <h2>What the evidence means together</h2>
+        <p class="interpretation-text">{{ overall.get('cross_layer_interpretation', '') }}</p>
+
+        {% if overall.get('key_observations') %}
+            <div class="observation-list">
+                {% for observation in overall.get('key_observations', []) %}
+                    <div class="observation-item">
+                        <span>✓</span>
+                        <p>{{ observation }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="section-kicker">Final finding-level analysis</span>
+                <h2>Risk & recommendations</h2>
+            </div>
+
+            <div class="filter-row">
+                <button class="filter-btn active" data-filter="all" type="button">All</button>
+                <button class="filter-btn" data-filter="high" type="button">High+</button>
+                <button class="filter-btn" data-filter="medium" type="button">Medium</button>
+                <button class="filter-btn" data-filter="low" type="button">Low</button>
+            </div>
+        </div>
+
+        <div class="analysis-list">
+            {% for item in phase3.get('analyses', []) %}
+                <article class="analysis-row"
+                         data-risk="{{ risk_class(item.get('risk_level', 'Low')) }}">
+
+                    <div class="analysis-main">
+                        <span class="finding-id">{{ item.get('finding_id') }}</span>
+                        <h3>{{ item.get('ai_classification', 'other')|replace('_', ' ')|title }}</h3>
+                        <p>{{ item.get('risk_explanation', '') }}</p>
+                    </div>
+
+                    <div class="analysis-meta">
+                        <span class="risk-pill {{ risk_class(item.get('risk_level', 'Low')) }}">
+                            {{ item.get('risk_level') }} · {{ item.get('risk_score') }}
+                        </span>
+
+                        <div>
+                            <small>Action</small>
+                            <strong>{{ item.get('recommended_action', '')|replace('_', ' ')|title }}</strong>
+                        </div>
+
+                        <div>
+                            <small>Confidence</small>
+                            <strong>{{ item.get('confidence', 0) }}%</strong>
+                        </div>
+
+                        <div>
+                            <small>Verification</small>
+                            <strong>{{ item.get('user_verification', 'not_required')|replace('_', ' ')|title }}</strong>
+                        </div>
+
+                        {% if item.get('visual_identity_evidence') %}
+                            <div class="visual-meta-block">
+                                <small>Visual evidence</small>
+                                <strong>
+                                    {{ item.get('visual_identity_evidence', {}).get('match_strength', 'No match') }}
+                                    {% if item.get('visual_identity_evidence', {}).get('best_face_distance') is not none %}
+                                        · d={{ '%.3f'|format(item.get('visual_identity_evidence', {}).get('best_face_distance')) }}
+                                    {% endif %}
+                                </strong>
+                            </div>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if overall.get('priority_actions') %}
+        <section class="panel next-actions-panel">
+            <div>
+                <span class="section-kicker">Next step</span>
+                <h2>Recommended actions</h2>
+                <p>Phase 3 recommends only. Phase 4 separates approval, execution, and verification.</p>
+                <a class="btn btn-primary phase4-cta" href="{{ url_for('phase4') }}">Open Phase 4 →</a>
+            </div>
+
+            <ol>
+                {% for action in overall.get('priority_actions', []) %}
+                    <li>
+                        <span>{{ loop.index }}</span>
+                        <p>{{ action }}</p>
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
+    {% endif %}
+
+{% else %}
+    <section class="panel empty-panel">
+        <div class="empty-symbol">✦</div>
+        <h2>Phase 3 is waiting for evidence</h2>
+        <p>Run Phase 2 first. The AI layer never invents a footprint without evidence.</p>
+        <a class="btn btn-primary" href="{{ url_for('phase2') }}">Open Phase 2</a>
+    </section>
+{% endif %}
+{% endblock %}

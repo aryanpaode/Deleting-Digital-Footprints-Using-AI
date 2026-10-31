@@ -1,0 +1,4 @@
+dlib-bin
+numpy
+Pillow
+requests

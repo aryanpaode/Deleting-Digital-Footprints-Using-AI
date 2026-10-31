@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Visual Review — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Phase 2{% endblock %}
+{% block page_title %}Visual Review{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="section-kicker">Human-guided visual verification</span>
+        <h1>Review the fetched images</h1>
+        <p>
+            These are public images that Phase 2A successfully fetched during the current scan.
+            Dlib's result is shown as supporting evidence, but your manual decision is authoritative
+            for whether the image visibly contains the searched person.
+        </p>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('phase2') }}">← Back to Phase 2</a>
+</section>
+
+<section class="panel visual-review-intro">
+    <div>
+        <span class="section-kicker">Important</span>
+        <h2>What are you confirming?</h2>
+        <p>
+            Choose <strong>Yes</strong> only when the fetched image visibly contains the person being searched.
+            This confirms the image association, not ownership of the website or account. A dlib distance is
+            Euclidean descriptor distance, not a probability or percentage.
+        </p>
+    </div>
+    <div class="visual-review-stats">
+        <span><strong>{{ visual_review_items|length }}</strong> fetched images</span>
+        <span><strong>{{ p2.get('visual_manual_confirmed_images', 0) }}</strong> confirmed</span>
+    </div>
+</section>
+
+<form method="post" action="{{ url_for('phase2_visual_review_submit') }}" class="visual-review-form">
+    <div class="visual-gallery">
+        {% for item in visual_review_items %}
+            <article class="visual-review-card">
+                <div class="visual-review-image-wrap">
+                    <img
+                        src="{{ url_for('visual_cache_file', cache_file=item.cache_file) }}"
+                        alt="Fetched candidate image {{ loop.index }}"
+                        loading="lazy"
+                    >
+                </div>
+
+                <div class="visual-review-card-body">
+                    <div class="visual-review-source">
+                        <span class="section-kicker">{{ item.domain or 'Public source' }}</span>
+                        <h3>{{ item.page_title }}</h3>
+                        {% if item.discovery_method == 'independent_tavily_image_search' %}
+                            <span class="visual-discovery-badge">Independent image discovery</span>
+                            {% if item.image_description %}
+                                <p class="visual-image-description">{{ item.image_description }}</p>
+                            {% endif %}
+                            {% if item.discovery_queries %}
+                                <div class="visual-query-list">
+                                    <small>Found using</small>
+                                    {% for query in item.discovery_queries[:3] %}
+                                        <code>{{ query }}</code>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                        {% if item.page_url %}
+                            <a href="{{ item.page_url }}" target="_blank" rel="noopener noreferrer">Open source page ↗</a>
+                        {% endif %}
+                    </div>
+
+                    <div class="visual-review-machine-grid">
+                        <div>
+                            <small>Faces detected</small>
+                            <strong>{{ item.faces_detected }}</strong>
+                        </div>
+                        <div>
+                            <small>Dlib result</small>
+                            <strong>{{ item.automated_match_strength }}</strong>
+                        </div>
+                        <div>
+                            <small>Best distance</small>
+                            <strong>
+                                {% if item.automated_best_face_distance is not none %}
+                                    {{ '%.3f'|format(item.automated_best_face_distance) }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div>
+                            <small>Image size</small>
+                            <strong>
+                                {% if item.width and item.height %}
+                                    {{ item.width }}×{{ item.height }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <fieldset class="visual-manual-choice">
+                        <legend>Does this image show the searched person?</legend>
+
+                        <label class="visual-choice-option">
+                            <input
+                                type="radio"
+                                name="visual_{{ item.review_id }}"
+                                value="confirmed"
+                                {% if item.manual_verification == 'confirmed' %}checked{% endif %}
+                            >
+                            <span>Yes</span>
+                        </label>
+
+                        <label class="visual-choice-option">
+                            <input
+                                type="radio"
+                                name="visual_{{ item.review_id }}"
+                                value="rejected"
+                                {% if item.manual_verification == 'rejected' %}checked{% endif %}
+                            >
+                            <span>No</span>
+                        </label>
+
+                        <label class="visual-choice-option">
+                            <input
+                                type="radio"
+                                name="visual_{{ item.review_id }}"
+                                value="unsure"
+                                {% if item.manual_verification == 'unsure' %}checked{% endif %}
+                            >
+                            <span>Unsure</span>
+                        </label>
+
+                        <label class="visual-choice-option visual-choice-muted">
+                            <input
+                                type="radio"
+                                name="visual_{{ item.review_id }}"
+                                value="unreviewed"
+                                {% if item.manual_verification not in ['confirmed', 'rejected', 'unsure'] %}checked{% endif %}
+                            >
+                            <span>Leave unreviewed</span>
+                        </label>
+                    </fieldset>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+
+    <div class="visual-review-actions panel">
+        <div>
+            <strong>Save visual evidence decisions</strong>
+            <small>
+                Confirmed images are carried forward as human-verified visual evidence.
+                The raw reference image and face embeddings are still not stored.
+            </small>
+        </div>
+        <button class="btn btn-primary" type="submit">Save visual review</button>
+    </div>
+</form>
+{% endblock %}

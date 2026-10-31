@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Phase 1 — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Phase 1{% endblock %}
+{% block page_title %}Identity & Consent{% endblock %}
+
+{% block content %}
+{% if request.args.get('verify') == '1' %}
+<section class="panel verification-mode-banner">
+    <div>
+        <span class="section-kicker">Remediation verification mode</span>
+        <h2>Re-scan the same subject</h2>
+        <p>Your Phase 4 baseline is already saved. Use the same identity and permissions needed for the evidence you want to verify, then complete Phase 3. The before/after comparison runs automatically.</p>
+    </div>
+</section>
+{% endif %}
+<section class="page-heading">
+    <div>
+        <span class="section-kicker">Start a new privacy scan</span>
+        <h1>Define the subject</h1>
+        <p>
+            Provide only the identity signals needed for discovery.
+            Sensitive checks remain disabled until you explicitly authorize them.
+        </p>
+    </div>
+
+    {% if profile.full_name %}
+        <div class="current-subject">
+            <span>{{ profile.full_name[:1]|upper }}</span>
+            <div>
+                <small>Latest subject</small>
+                <strong>{{ profile.full_name }}</strong>
+            </div>
+        </div>
+    {% endif %}
+</section>
+
+<form class="panel form-panel js-busy-form"
+      method="post"
+      enctype="multipart/form-data"
+      action="{{ url_for('run_scan') }}"
+      data-busy-title="Running Phase 2 scan…"
+      data-busy-text="Public discovery and approved checks are running.">
+
+    <div class="panel-title-row">
+        <div>
+            <span class="section-kicker">Identity signals</span>
+            <h2>Subject profile</h2>
+        </div>
+        <span class="soft-label">Local input</span>
+    </div>
+
+    <div class="form-grid">
+        <label class="field">
+            <span>Full name <small>(optional)</small></span>
+            <input name="full_name"
+                   autocomplete="name"
+                   value="{{ profile.full_name or '' }}"
+                   placeholder="e.g. Maya Mehra">
+        </label>
+
+        <label class="field">
+            <span>Email <small>(optional)</small></span>
+            <input name="email"
+                   type="email"
+                   autocomplete="email"
+                   placeholder="Used only when breach lookup is authorized">
+        </label>
+
+        <label class="field">
+            <span>Username <small>(optional)</small></span>
+            <input name="username"
+                   value="{{ profile.username or '' }}"
+                   placeholder="Known public handle">
+        </label>
+
+        <label class="field">
+            <span>Phone <small>(optional)</small></span>
+            <input name="phone"
+                   autocomplete="tel"
+                   placeholder="Optional identity signal">
+        </label>
+
+        <label class="field field-wide">
+            <span>Context terms <small>(optional)</small></span>
+            <input name="context_terms"
+                   value="{{ (profile.context_terms or [])|join(', ') }}"
+                   placeholder="NMIMS, MPSTME, designer, London">
+            <small>Comma-separated clues help distinguish genuine matches from same-name results.</small>
+        </label>
+    </div>
+
+    <div class="visual-upload-section">
+        <div class="panel-title-row compact-row">
+            <div>
+                <span class="section-kicker">Optional visual identity</span>
+                <h2>Reference image</h2>
+                <p class="section-note">
+                    Add one clear photograph only if you want Phase 2A to compare
+                    faces found in publicly discovered candidate images.
+                </p>
+            </div>
+            <span class="soft-label">Optional</span>
+        </div>
+
+        <div class="visual-upload-grid">
+            <label class="image-drop-card" for="referenceImage">
+                <input id="referenceImage"
+                       name="reference_image"
+                       type="file"
+                       accept="image/jpeg,image/png,image/webp">
+                <div class="image-drop-copy">
+                    <span class="image-drop-icon">◎</span>
+                    <strong>Choose a reference image</strong>
+                    <small>JPG, JPEG, PNG or WEBP · max 8 MB</small>
+                </div>
+            </label>
+
+            <div class="image-preview-card" id="imagePreviewCard" hidden>
+                <img id="imagePreview" alt="Local reference preview">
+                <div>
+                    <strong id="imagePreviewName">Reference image</strong>
+                    <small>Preview only — the raw upload is deleted after this scan.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="visual-privacy-note">
+            <span>⌁</span>
+            The face descriptor is computed locally. The raw image and biometric
+            embedding are never sent to the Phase 3 LLM. When visual discovery is authorised,
+            identity/context search queries may be sent to the configured public search provider.
+        </div>
+    </div>
+
+    <div class="consent-section">
+        <div class="consent-heading">
+            <div>
+                <span class="section-kicker">Explicit permissions</span>
+                <h2>Choose what this scan may access</h2>
+            </div>
+            <span class="warning-label">Nothing sensitive runs silently</span>
+        </div>
+
+        <div class="consent-grid">
+            <label class="consent-card">
+                <input type="checkbox" name="consent_breach">
+                <span class="consent-switch"></span>
+                <div>
+                    <strong>Authorize breach lookup</strong>
+                    <small>Check the supplied email against configured breach providers.</small>
+                </div>
+            </label>
+
+            <label class="consent-card">
+                <input type="checkbox" name="consent_local">
+                <span class="consent-switch"></span>
+                <div>
+                    <strong>Authorize local browser audit</strong>
+                    <small>Metadata only — not passwords, cookie contents, or full history.</small>
+                </div>
+            </label>
+
+            <label class="consent-card consent-card-visual" id="visualConsentCard">
+                <input type="checkbox" name="consent_visual" id="consentVisual" disabled>
+                <span class="consent-switch"></span>
+                <div>
+                    <strong>Authorize visual identity discovery & matching</strong>
+                    <small>Use the reference face plus identity/context queries to discover public images independently and compare accessible faces locally.</small>
+                </div>
+            </label>
+
+            <label class="consent-card">
+                <input type="checkbox" name="cache_only">
+                <span class="consent-switch"></span>
+                <div>
+                    <strong>Cache-only mode</strong>
+                    <small>Offline mode — no fresh public discovery, email-breach lookup, or visual web matching.</small>
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <div class="panel-actions">
+        <div class="privacy-inline">
+            <span>⌁</span>
+            API keys remain in your local <code>.env</code>.
+        </div>
+
+        <button class="btn btn-primary btn-large" type="submit">
+            Run Privacy Scan
+            <span>→</span>
+        </button>
+    </div>
+</form>
+{% endblock %}

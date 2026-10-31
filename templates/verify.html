@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Verification — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Phase 3 Verification{% endblock %}
+{% block page_title %}Confirm Uncertain Matches{% endblock %}
+
+{% block content %}
+<section class="page-heading verification-heading">
+    <div>
+        <span class="section-kicker">Human in the loop</span>
+        <h1>{{ total }} finding{% if total != 1 %}s{% endif %} need your confirmation</h1>
+        <p>
+            These selections are identity decisions only.
+            They do not delete, edit, or remove anything.
+        </p>
+    </div>
+
+    <div class="verification-legend">
+        <span><b class="legend-dot yes"></b> Yes → reassess</span>
+        <span><b class="legend-dot no"></b> No → exclude</span>
+        <span><b class="legend-dot unsure"></b> Unsure → unresolved</span>
+    </div>
+</section>
+
+<form method="post"
+      action="{{ url_for('phase3_submit_verification') }}"
+      class="verify-form js-busy-form"
+      data-busy-title="Applying your confirmations…"
+      data-busy-text="Confirmed findings are being reassessed before the final risk is calculated.">
+
+    <div class="verify-progress">
+        <div>
+            <strong><span id="answeredCount">0</span> / {{ total }}</strong>
+            <span>answered</span>
+        </div>
+
+        <div class="progress-track">
+            <div class="progress-fill" id="verifyProgress"></div>
+        </div>
+    </div>
+
+    <div class="verification-stack">
+        {% for item in items %}
+            {% set a = item.analysis %}
+            {% set f = item.finding %}
+
+            <article class="panel verification-card">
+                <div class="verification-card-head">
+                    <div>
+                        <span class="finding-id">{{ a.get('finding_id') }}</span>
+                        <h2>{{ item.label }}</h2>
+
+                        <div class="source-line">
+                            {% if f.get('domain') %}
+                                <span>{{ f.get('domain') }}</span>
+                            {% endif %}
+
+                            {% if f.get('source_category') %}
+                                <span>{{ f.get('source_category')|replace('_', ' ')|title }}</span>
+                            {% endif %}
+
+                            {% if f.get('identity_status') %}
+                                <span>{{ f.get('identity_status') }} match</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <span class="risk-pill {{ risk_class(a.get('risk_level', 'Low')) }}">
+                        Initial {{ a.get('risk_level') }} · {{ a.get('risk_score') }}
+                    </span>
+                </div>
+
+                <div class="ai-reason">
+                    <span class="section-kicker">Why the AI is asking</span>
+                    <p>{{ a.get('risk_explanation', '') }}</p>
+                </div>
+
+                <fieldset class="verification-choice">
+                    <legend>
+                        {{ a.get('verification_question') or 'Do you confirm that this finding belongs to you?' }}
+                    </legend>
+
+                    <div class="choice-grid">
+                        <label class="choice-card yes-choice">
+                            <input type="radio"
+                                   name="verification_{{ a.get('finding_id') }}"
+                                   value="confirmed"
+                                   required>
+                            <span class="choice-icon">✓</span>
+                            <span>
+                                <strong>Yes</strong>
+                                <small>This belongs to me</small>
+                            </span>
+                        </label>
+
+                        <label class="choice-card no-choice">
+                            <input type="radio"
+                                   name="verification_{{ a.get('finding_id') }}"
+                                   value="rejected"
+                                   required>
+                            <span class="choice-icon">×</span>
+                            <span>
+                                <strong>No</strong>
+                                <small>This is not mine</small>
+                            </span>
+                        </label>
+
+                        <label class="choice-card unsure-choice">
+                            <input type="radio"
+                                   name="verification_{{ a.get('finding_id') }}"
+                                   value="unsure"
+                                   required>
+                            <span class="choice-icon">?</span>
+                            <span>
+                                <strong>Unsure</strong>
+                                <small>Keep unresolved</small>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+            </article>
+        {% endfor %}
+    </div>
+
+    <div class="verify-submit-bar">
+        <div>
+            <strong>Nothing destructive happens here.</strong>
+            <span>Your answers only determine Phase 3 identity ownership.</span>
+        </div>
+
+        <button class="btn btn-primary btn-large"
+                id="verificationSubmit"
+                type="submit"
+                disabled>
+            Finalize Phase 3
+            <span>→</span>
+        </button>
+    </div>
+</form>
+{% endblock %}

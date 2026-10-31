@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Overview — Deleting Footprints Using AI{% endblock %}
+{% block eyebrow %}Privacy Intelligence Console{% endblock %}
+{% block page_title %}Project Overview{% endblock %}
+
+{% block content %}
+<section class="hero-dashboard">
+    <div>
+        <span class="section-kicker">Deleting Footprints Using AI</span>
+        <h1>Understand your digital exposure.<br><span>Control what happens next.</span></h1>
+        <p>
+            A privacy-first system that discovers digital footprints,
+            interprets risk with AI, and keeps the user in control of every identity
+            confirmation and future remediation step.
+        </p>
+    </div>
+
+    <div class="hero-badge">
+        <div class="hero-shield">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M32 6 51 13v13c0 13-7.7 24.7-19 30C20.7 50.7 13 39 13 26V13l19-7Z"></path>
+                <path class="hero-check" d="m23 31 6 6 13-15"></path>
+            </svg>
+        </div>
+        <div>
+            <strong>Privacy by design</strong>
+            <span>Minimal data sent to AI. Explicit user control.</span>
+        </div>
+    </div>
+</section>
+
+{% if aggregate %}
+<section class="latest-scan-banner">
+    <div>
+        <span class="section-kicker">Latest saved scan</span>
+        <strong>{{ profile.full_name or 'Current subject' }}</strong>
+        <small>{{ (aggregate.get('run_time') or '')[:19]|replace('T', ' ') }} UTC · Run {{ (aggregate.get('run_id') or '')[:8] }}</small>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('phase1') }}">Start new scan</a>
+</section>
+{% endif %}
+
+<section class="phase-home-grid">
+    <a class="phase-home-card" href="{{ url_for('phase1') }}">
+        <div class="phase-card-top">
+            <span class="phase-index">01</span>
+            <span class="phase-status ready">Ready</span>
+        </div>
+        <h2>Identity & Consent</h2>
+        <p>Define the subject, optionally add a reference image, and explicitly authorize sensitive checks.</p>
+        <div class="phase-card-arrow">Open Phase 1 →</div>
+    </a>
+
+    <a class="phase-home-card" href="{{ url_for('phase2') }}">
+        <div class="phase-card-top">
+            <span class="phase-index">02</span>
+            {% if aggregate %}
+                <span class="phase-status complete">Results available</span>
+            {% else %}
+                <span class="phase-status waiting">Waiting</span>
+            {% endif %}
+        </div>
+        <h2>Evidence Discovery</h2>
+        <p>Public and optional visual identity evidence, breach/broker exposure, and local browser metadata.</p>
+        <div class="phase-card-arrow">Open Phase 2 →</div>
+    </a>
+
+    <a class="phase-home-card" href="{{ url_for('phase3') }}">
+        <div class="phase-card-top">
+            <span class="phase-index">03</span>
+            {% if phase3 %}
+                <span class="phase-status complete">Analysis complete</span>
+            {% elif aggregate %}
+                <span class="phase-status ready">Ready</span>
+            {% else %}
+                <span class="phase-status waiting">Waiting</span>
+            {% endif %}
+        </div>
+        <h2>AI Interpretation</h2>
+        <p>Risk classification, identity verification, reassessment, and recommendations.</p>
+        <div class="phase-card-arrow">Open Phase 3 →</div>
+    </a>
+
+
+    <a class="phase-home-card" href="{{ url_for('phase4') }}">
+        <div class="phase-card-top">
+            <span class="phase-index">04</span>
+            {% if phase4 %}
+                <span class="phase-status complete">Plan active</span>
+            {% elif phase3 %}
+                <span class="phase-status ready">Ready</span>
+            {% else %}
+                <span class="phase-status waiting">Waiting</span>
+            {% endif %}
+        </div>
+        <h2>Remediation & Tracking</h2>
+        <p>Explicit approval, guided external actions, selective local cleanup, and verification history.</p>
+        <div class="phase-card-arrow">Open Phase 4 →</div>
+    </a>
+</section>
+
+{% if aggregate or phase3 %}
+<section class="dashboard-summary-grid">
+    {% if aggregate %}
+        <article class="summary-card">
+            <small>Public candidates</small>
+            <strong>{{ p2.get('public_candidates', 0) }}</strong>
+            <span>{{ p2.get('public_retained_matches', 0) }} retained · {{ p2.get('public_possible_matches', 0) }} possible</span>
+        </article>
+
+        <article class="summary-card">
+            <small>Known breaches</small>
+            <strong>{{ p2.get('known_breaches', 0) }}</strong>
+            <span>{{ p2.get('broker_records', 0) }} broker records</span>
+        </article>
+
+        <article class="summary-card">
+            <small>Potential trackers</small>
+            <strong>{{ p2.get('potential_tracker_cookies', 0) }}</strong>
+            <span>{{ p2.get('persistent_cookies', 0) }} persistent cookies</span>
+        </article>
+    {% endif %}
+
+    {% if phase3 %}
+        {% set overall = phase3.get('cross_layer_assessment', {}) %}
+        <article class="summary-card emphasis">
+            <small>Overall privacy risk</small>
+            <strong>{{ overall.get('overall_risk_score', 0) }}</strong>
+            <span>{{ overall.get('overall_risk_level', 'Unknown') }} risk after verification</span>
+        </article>
+    {% endif %}
+</section>
+{% endif %}
+
+<section class="principles-strip">
+    <div>
+        <span class="principle-icon">⌁</span>
+        <div>
+            <strong>Minimal AI input</strong>
+            <small>No raw email, phone, reference image, face embedding, browser paths, history, or cookie values.</small>
+        </div>
+    </div>
+
+    <div>
+        <span class="principle-icon">✓</span>
+        <div>
+            <strong>Human verification</strong>
+            <small>Uncertain matches require explicit Yes / No / Unsure confirmation.</small>
+        </div>
+    </div>
+
+    <div>
+        <span class="principle-icon">⛉</span>
+        <div>
+            <strong>No silent remediation</strong>
+            <small>Phase 3 recommends. Phase 4 separates approval, execution, and verification.</small>
+        </div>
+    </div>
+</section>
+{% endblock %}
